@@ -1,0 +1,10 @@
+streamlit
+langchain
+openai
+crewai
+python-dotenv
+requests
+pyttsx3
+SpeechRecognition
+pyaudio
+pypdf

@@ -1,0 +1,32 @@
+[
+    {
+        "username": "Saai",
+        "date": "2025-07-18",
+        "task": "AI Project",
+        "completed": true
+    },
+    {
+        "username": "Saai",
+        "date": "2025-07-25",
+        "task": "Solve DSA Problem",
+        "completed": true
+    },
+    {
+        "username": "Saai",
+        "date": "2025-07-31",
+        "task": "Solve DSA Problem",
+        "completed": true
+    },
+    {
+        "username": "Saai",
+        "date": "2025-07-19",
+        "task": "AI project",
+        "completed": true
+    },
+    {
+        "username": "Saai",
+        "date": "2025-07-18",
+        "task": "AI Project",
+        "completed": false
+    }
+]
