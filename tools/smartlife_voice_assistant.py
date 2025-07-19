@@ -14,11 +14,9 @@ import tempfile
 
 SAMPLE_RATE = 16000
 DURATION = 5
+DEVICE = "cpu"  # Streamlit Cloud only supports CPU
 
-# ✅ Use CPU for Streamlit compatibility
-DEVICE = "cpu"
-
-# ✅ Load models only once and reuse them across Streamlit reruns
+# ✅ Load models only once and reuse across reruns
 @st.cache_resource
 def load_models():
     whisper_processor = AutoProcessor.from_pretrained("openai/whisper-tiny.en")
@@ -52,7 +50,6 @@ def speech_to_text(audio_path, processor, model):
 
 def get_response_from_model(user_input, tokenizer, model):
     inputs = tokenizer(user_input, return_tensors="pt").to(DEVICE)
-
     outputs = model.generate(
         **inputs,
         max_new_tokens=80,
@@ -88,9 +85,9 @@ def voice_assistant():
         audio_data = speak_streamlit(reply)
         return audio_data, command, reply
 
-    except torch.cuda.OutOfMemoryError:
-        return None, None, "❌ CUDA Out of Memory. Try restarting your app or switch to CPU execution."
+    except Exception as e:
+        return None, None, f"❌ Error occurred: {str(e)}"
 
-# ✅ Call this from your Streamlit app
+# ✅ Entry point for Streamlit
 def main():
     return voice_assistant()

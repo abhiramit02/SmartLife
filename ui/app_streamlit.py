@@ -16,6 +16,7 @@ from tools.smartlife_voice_assistant import main as run_voice_assistant
 from ui.login_page import login_page
 from ui.signup_page import signup_page
 
+import tempfile
 
 import datetime
 from tools.calendar_tool import add_task, get_tasks, complete_task, get_motivation
@@ -42,7 +43,7 @@ from tools.smartlife_voice_assistant import (
     speak_streamlit
 )
 
-from TTS.api import TTS
+from gtts import gTTS
 import base64  # Make sure this is at the top of your script
 
 def get_image_base64(image_path):
@@ -74,21 +75,13 @@ if 'username' not in st.session_state:
 
 
 def speak_streamlit(text):
-    print("🔊 Speaking...")
-    tts = TTS(model_name="tts_models/en/ljspeech/tacotron2-DDC", progress_bar=False)
-
-    # Save to temporary wav
-    tts.tts_to_file(text=text, file_path="temp.wav")
-
-    # Load audio into memory
-    buffer = io.BytesIO()
-    with open("temp.wav", "rb") as f:
-        buffer.write(f.read())
-    buffer.seek(0)
-
-    # Optionally delete temp.wav
-    os.remove("temp.wav")
-    return buffer
+    tts = gTTS(text=text, lang='en')
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
+        temp_path = fp.name
+        tts.save(temp_path)
+        audio_bytes = open(temp_path, "rb").read()
+    os.remove(temp_path)
+    return io.BytesIO(audio_bytes)
 
 
 # --- News & Weather Functions ---
