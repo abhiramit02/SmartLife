@@ -11,6 +11,10 @@ from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from langchain_groq import ChatGroq
 from langchain_core.documents import Document
+__import__('pysqlite3')
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+
 
 # --- Force Chroma to use duckdb (avoid sqlite3 compatibility issues) ---
 os.environ["CHROMA_DB_IMPL"] = "duckdb"
