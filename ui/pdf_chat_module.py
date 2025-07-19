@@ -12,6 +12,9 @@ from langchain.chains import ConversationalRetrievalChain
 from langchain_groq import ChatGroq
 from langchain_core.documents import Document
 
+# --- Force Chroma to use duckdb (avoid sqlite3 compatibility issues) ---
+os.environ["CHROMA_DB_IMPL"] = "duckdb"
+
 # --- Extract Text from Uploaded PDFs ---
 def extract_text_from_pdfs(uploaded_files):
     raw_text = ""
