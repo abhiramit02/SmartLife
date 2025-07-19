@@ -1,10 +1,11 @@
 # 📁 ui/pdf_chat_module.py
+
 import os
 import tempfile
 import streamlit as st
 from PyPDF2 import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores import FAISS
+from langchain.vectorstores import Chroma
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
@@ -27,24 +28,27 @@ def initialize_pdf_qa_chain(pdf_files):
     docs = splitter.create_documents([text])
 
     embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-    vectorstore = FAISS.from_documents(docs, embeddings)
-    retriever = vectorstore.as_retriever(search_type="similarity", k=4)
 
-    memory = ConversationBufferMemory(
-        memory_key="chat_history",
-        return_messages=True,
-        output_key="answer"
-    )
+    # ✅ Use Chroma instead of FAISS for compatibility
+    with tempfile.TemporaryDirectory() as temp_dir:
+        vectorstore = Chroma.from_documents(docs, embeddings, persist_directory=temp_dir)
+        retriever = vectorstore.as_retriever(search_type="similarity", k=4)
 
-    llm = ChatGroq(temperature=0.2, model_name="llama3-8b-8192")
+        memory = ConversationBufferMemory(
+            memory_key="chat_history",
+            return_messages=True,
+            output_key="answer"
+        )
 
-    chain = ConversationalRetrievalChain.from_llm(
-        llm=llm,
-        retriever=retriever,
-        memory=memory,
-        return_source_documents=True
-    )
-    return chain
+        llm = ChatGroq(temperature=0.2, model_name="llama3-8b-8192")
+
+        chain = ConversationalRetrievalChain.from_llm(
+            llm=llm,
+            retriever=retriever,
+            memory=memory,
+            return_source_documents=True
+        )
+        return chain
 
 # --- UI Logic ---
 def render_pdf_chat():
