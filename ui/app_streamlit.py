@@ -42,7 +42,8 @@ from tools.smartlife_voice_assistant import (
     get_response_from_model,
     speak_streamlit
 )
-
+import streamlit as st
+from langchain_groq import ChatGroq
 from gtts import gTTS
 import base64  # Make sure this is at the top of your script
 
@@ -58,10 +59,19 @@ print("✅ YOUTUBE_API_KEY from .env:", os.getenv("YOUTUBE_API_KEY"))
 import os
 from dotenv import load_dotenv
 load_dotenv()
+# Get keys from Streamlit secrets
+NEWS_API_KEY = st.secrets["NEWS_API_KEY"]
+SERP_API_KEY = st.secrets["SERPAPI_API_KEY"]
 
-NEWS_API_KEY = os.getenv("NEWS_API_KEY")
-SERP_API_KEY = os.getenv("SERP_API_KEY")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+# ✅ Access the key from Streamlit secrets
+groq_api_key = st.secrets["GROQ_API_KEY"]
+
+# ✅ Pass the key explicitly
+llm = ChatGroq(
+    api_key=groq_api_key,  # REQUIRED!
+    model="mixtral-8x7b-32768"  # or "llama3-8b-8192", etc.
+)
+
 if 'users' not in st.session_state:
     st.session_state.users = {
         "Abhirami": "abhiramit09"  # Predefined user for testing
