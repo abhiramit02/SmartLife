@@ -40,7 +40,12 @@ def initialize_pdf_qa_chain(pdf_files):
             output_key="answer"
         )
 
-        llm = ChatGroq(temperature=0.2, model_name="llama3-8b-8192")
+        llm = ChatGroq(
+    api_key=st.secrets["GROQ_API_KEY"],
+    temperature=0.2,
+    model_name="llama3-8b-8192"
+)
+
 
         chain = ConversationalRetrievalChain.from_llm(
             llm=llm,
