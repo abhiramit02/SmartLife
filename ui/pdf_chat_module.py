@@ -1,16 +1,15 @@
-# 📁 ui/pdf_chat_module.py
-from chromadb import Client
-from chromadb.config import Settings
+import os
+import tempfile
+import streamlit as st
+from PyPDF2 import PdfReader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
 from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from langchain_groq import ChatGroq
-import tempfile
-import os
-import streamlit as st
-from PyPDF2 import PdfReader
+from chromadb.config import Settings
+from langchain_core.documents import Document
 
 def extract_text_from_pdfs(uploaded_files):
     raw_text = ""
@@ -30,25 +29,24 @@ def initialize_pdf_qa_chain(pdf_files):
         return None
 
     splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=150)
-    docs = splitter.create_documents([text])
+    docs = splitter.split_text(text)
+    docs = [Document(page_content=t) for t in docs]  # Convert to Document objects
 
     embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
-            # ✅ NEW Chroma Client (local, duckdb+parquet, avoids sqlite)
-            settings = Settings(
+            # ✅ Simplified Chroma setup with DuckDB
+            client_settings = Settings(
                 chroma_db_impl="duckdb+parquet",
                 persist_directory=temp_dir
             )
-            chroma_client = Client(settings)
-
-            # ✅ Create LangChain-compatible Chroma vectorstore
+            
             vectorstore = Chroma.from_documents(
                 documents=docs,
                 embedding=embeddings,
                 persist_directory=temp_dir,
-                client=chroma_client,
+                client_settings=client_settings,
                 collection_name="pdf_collection"
             )
 
@@ -83,6 +81,7 @@ def initialize_pdf_qa_chain(pdf_files):
     except Exception as e:
         st.error(f"Failed to initialize PDF QA chain: {e}")
         return None
+
 
 
 
