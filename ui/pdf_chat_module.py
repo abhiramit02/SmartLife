@@ -32,6 +32,7 @@ def extract_text_from_pdfs(uploaded_files):
     return raw_text
 
 # --- Set Up Conversational Retrieval Chain ---
+# --- Set Up Conversational Retrieval Chain ---
 def initialize_pdf_qa_chain(pdf_files):
     text = extract_text_from_pdfs(pdf_files)
     if not text.strip():
@@ -45,7 +46,14 @@ def initialize_pdf_qa_chain(pdf_files):
 
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
-            vectorstore = Chroma.from_documents(docs, embeddings, persist_directory=temp_dir)
+            vectorstore = Chroma.from_documents(
+                documents=docs,
+                embedding=embeddings,
+                persist_directory=temp_dir,
+                client_settings={
+                    "chroma_db_impl": "duckdb+parquet"
+                }
+            )
             retriever = vectorstore.as_retriever(search_type="similarity", k=4)
 
             memory = ConversationBufferMemory(
@@ -76,6 +84,7 @@ def initialize_pdf_qa_chain(pdf_files):
     except Exception as e:
         st.error(f"Failed to initialize PDF QA chain: {e}")
         return None
+
 
 # --- Streamlit UI Component ---
 def render_pdf_chat():
