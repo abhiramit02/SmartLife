@@ -1,22 +1,29 @@
-import sounddevice as sd
-import scipy.io.wavfile as wav
+import os
+import io
+import tempfile
+import streamlit as st
+from gtts import gTTS
 import torch
 from transformers import (
     AutoProcessor, AutoModelForSpeechSeq2Seq,
     BlenderbotTokenizer, BlenderbotForConditionalGeneration
 )
-from gtts import gTTS
-import os
-import torchaudio
-import io
-import streamlit as st
-import tempfile
+
+# Try importing sounddevice only if local
+try:
+    import sounddevice as sd
+    import scipy.io.wavfile as wav
+    import torchaudio
+    SOUND_AVAILABLE = True
+except OSError:
+    SOUND_AVAILABLE = False
+except Exception:
+    SOUND_AVAILABLE = False
 
 SAMPLE_RATE = 16000
 DURATION = 5
-DEVICE = "cpu"  # Streamlit Cloud only supports CPU
+DEVICE = "cpu"  # Streamlit Cloud supports only CPU
 
-# ✅ Load models only once and reuse across reruns
 @st.cache_resource
 def load_models():
     whisper_processor = AutoProcessor.from_pretrained("openai/whisper-tiny.en")
@@ -70,16 +77,19 @@ def speak_streamlit(text):
 
 # 🔁 Main voice assistant function
 def voice_assistant():
-    try:
-        models = load_models()
-        whisper_processor, whisper_model = models["whisper"]
-        blender_tokenizer, blender_model = models["blender"]
+    models = load_models()
+    whisper_processor, whisper_model = models["whisper"]
+    blender_tokenizer, blender_model = models["blender"]
 
-        record_audio()
-        command = speech_to_text("user_input.wav", whisper_processor, whisper_model)
+    try:
+        if SOUND_AVAILABLE:
+            record_audio()
+            command = speech_to_text("user_input.wav", whisper_processor, whisper_model)
+        else:
+            command = st.text_input("🎤 Microphone not supported on cloud. Type your command:")
 
         if not command.strip():
-            return None, None, "Couldn't understand your voice. Please try again."
+            return None, None, "⚠️ No input detected."
 
         reply = get_response_from_model(command, blender_tokenizer, blender_model)
         audio_data = speak_streamlit(reply)
