@@ -33,6 +33,8 @@ def extract_text_from_pdfs(uploaded_files):
 
 # --- Set Up Conversational Retrieval Chain ---
 # --- Set Up Conversational Retrieval Chain ---
+from chromadb.config import Settings  # <- add this import at the top
+
 def initialize_pdf_qa_chain(pdf_files):
     text = extract_text_from_pdfs(pdf_files)
     if not text.strip():
@@ -46,13 +48,12 @@ def initialize_pdf_qa_chain(pdf_files):
 
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(chroma_db_impl="duckdb+parquet")  # use correct Settings object
             vectorstore = Chroma.from_documents(
                 documents=docs,
                 embedding=embeddings,
                 persist_directory=temp_dir,
-                client_settings={
-                    "chroma_db_impl": "duckdb+parquet"
-                }
+                client_settings=settings
             )
             retriever = vectorstore.as_retriever(search_type="similarity", k=4)
 
@@ -62,7 +63,6 @@ def initialize_pdf_qa_chain(pdf_files):
                 output_key="answer"
             )
 
-            # Load GROQ API Key from Streamlit secrets or environment
             groq_api_key = os.getenv("GROQ_API_KEY") or st.secrets.get("GROQ_API_KEY", "")
             if not groq_api_key:
                 st.error("GROQ API Key not found. Please set it in `.env` or `secrets.toml`.")
@@ -84,6 +84,7 @@ def initialize_pdf_qa_chain(pdf_files):
     except Exception as e:
         st.error(f"Failed to initialize PDF QA chain: {e}")
         return None
+
 
 
 # --- Streamlit UI Component ---
