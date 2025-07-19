@@ -11,6 +11,8 @@ from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from langchain_groq import ChatGroq
 from langchain_core.documents import Document
+from chromadb import HttpClient
+from chromadb.config import Settings
 __import__('pysqlite3')
 import sys
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
@@ -48,13 +50,20 @@ def initialize_pdf_qa_chain(pdf_files):
 
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
-            settings = Settings(chroma_db_impl="duckdb+parquet")  # use correct Settings object
+            settings = Settings(
+                chroma_api_impl="local",
+                chroma_db_impl="duckdb+parquet",
+                persist_directory=temp_dir
+            )
+            chroma_client = HttpClient(settings=settings)
+
             vectorstore = Chroma.from_documents(
                 documents=docs,
                 embedding=embeddings,
-                persist_directory=temp_dir,
-                client_settings=settings
+                client=chroma_client,
+                collection_name="pdf_collection"
             )
+
             retriever = vectorstore.as_retriever(search_type="similarity", k=4)
 
             memory = ConversationBufferMemory(
