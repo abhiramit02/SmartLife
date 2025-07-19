@@ -148,7 +148,7 @@ def login_page():
     left_col, right_col = st.columns([0.5, 0.6])
 
     with left_col:
-        st.image("D:/SmartLife/assets/login logo.jpeg", use_container_width=True)
+        st.image("assets/login_logo.jpeg", use_container_width=True)
 
 
     with right_col:
@@ -190,7 +190,7 @@ def signup_page():
 
     with left_col:
         # Make image fill container
-        st.image("D:/SmartLife/assets/signup.png", use_container_width=True)
+        st.image("assets/signup.png", use_container_width=True)
 
     with right_col:
         st.markdown("<h1 style='text-align: center;'>📝 Sign Up</h1>", unsafe_allow_html=True)
@@ -413,7 +413,7 @@ elif feature == "🗓️ Task Planner":
     spacer, left_col, right_col = st.columns([0.05, 0.4, 0.55])  # 1/4 and 3/4 ratio
 
     with left_col:
-        img_path = "D:/SmartLife/assets/task.png"
+        img_path = "assets/task.png"
         img_base64 = base64.b64encode(open(img_path, "rb").read()).decode()
 
         st.markdown(
@@ -475,7 +475,7 @@ elif feature == "🧘 Wellness & Mood":
 
     # Create two columns: 1/4 for image, 3/4 for content
     left_col, right_col = st.columns([1, 3])
-    image_path = "D:/SmartLife/assets/wellness and mood.png"
+    image_path = "assets/wellness and mood.png"
     def get_base64_image(image_path):
         with open(image_path, "rb") as img_file:
             return base64.b64encode(img_file.read()).decode()
@@ -528,7 +528,7 @@ elif feature == "🥗 Diet Tips":
     col1, col2 = st.columns([3, 5])  # Sidebar image : Main content
 
     with col1:
-        img_b64 = get_image_base64("D:/SmartLife/assets/diet.png")
+        img_b64 = get_image_base64("assets/diet.png")
         st.markdown(
         f"""
         <div style="height: 100vh; width: 100%; display: flex; align-items: stretch; justify-content: flex-start; margin-left: -16px;">
@@ -553,7 +553,7 @@ elif feature == "📈 Motivation":
     col1, col2 = st.columns([5, 7])  # Wider left for sidebar, larger right for content
 
     with col1:
-        img_b64 = get_image_base64("D:/SmartLife/assets/motivation.png")  # Replace with your actual image
+        img_b64 = get_image_base64("assets/motivation.png")  # Replace with your actual image
         st.markdown(
             f"""
             <div style="height: 100vh; width: 100%; display: flex; align-items: stretch; justify-content: flex-start; margin-left: -16px;">
@@ -606,7 +606,7 @@ elif feature == "📢 Voice Assistant":
     col1, col2 = st.columns([6, 7])
 
     with col1:
-        img_b64 = get_image_base64("D:/SmartLife/assets/voice.png")
+        img_b64 = get_image_base64("assets/voice.png")
         st.markdown(
             f"""
             <div style="height: 40vh; width: 100%; display: flex; align-items: stretch; justify-content: flex-start; margin-left: -16px;">
@@ -652,7 +652,7 @@ elif feature == "📄 PDF Q&A":
     col1, col2 = st.columns([3, 7])  # Sidebar image : PDF chat content
 
     with col1:
-        img_b64 = get_image_base64("D:/SmartLife/assets/pdf.png")  # Replace with your desired image path
+        img_b64 = get_image_base64("assets/pdf.png")  # Replace with your desired image path
         st.markdown(
             f"""
             <div style="height: 100vh; width: 100%; display: flex; align-items: stretch; justify-content: flex-start; margin-left: -16px;">
@@ -673,7 +673,7 @@ elif feature == "📰 City News & Weather":
     col1, col2 = st.columns([6, 7])  # Wider left for sidebar, larger right for content
 
     with col1:
-        img_b64 = get_image_base64("D:/SmartLife/assets/climate.png")  # Update path to your image
+        img_b64 = get_image_base64("assets/climate.png")  # Update path to your image
         st.markdown(
             f"""
             <div style="height: 100vh; width: 100%; display: flex; align-items: stretch; justify-content: flex-start; margin-left: -16px;">
