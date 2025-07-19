@@ -475,7 +475,7 @@ elif feature == "🧘 Wellness & Mood":
 
     # Create two columns: 1/4 for image, 3/4 for content
     left_col, right_col = st.columns([1, 3])
-    image_path = "assets/wellness and mood.png"
+    image_path = "assets/wellness_and_mood.png"
     def get_base64_image(image_path):
         with open(image_path, "rb") as img_file:
             return base64.b64encode(img_file.read()).decode()
