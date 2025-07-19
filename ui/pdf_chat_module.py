@@ -11,7 +11,7 @@ from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from langchain_groq import ChatGroq
 
-# --- Helper Function to extract text from PDFs ---
+# --- Extract Text from Uploaded PDFs ---
 def extract_text_from_pdfs(uploaded_files):
     raw_text = ""
     for file in uploaded_files:
@@ -20,7 +20,7 @@ def extract_text_from_pdfs(uploaded_files):
             raw_text += page.extract_text() or ""
     return raw_text
 
-# --- Initialize Chain from Uploaded PDFs ---
+# --- Set Up Conversational Retrieval Chain ---
 def initialize_pdf_qa_chain(pdf_files):
     text = extract_text_from_pdfs(pdf_files)
 
@@ -29,7 +29,6 @@ def initialize_pdf_qa_chain(pdf_files):
 
     embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
-    # ✅ Use Chroma instead of FAISS for compatibility
     with tempfile.TemporaryDirectory() as temp_dir:
         vectorstore = Chroma.from_documents(docs, embeddings, persist_directory=temp_dir)
         retriever = vectorstore.as_retriever(search_type="similarity", k=4)
@@ -41,11 +40,10 @@ def initialize_pdf_qa_chain(pdf_files):
         )
 
         llm = ChatGroq(
-    api_key=st.secrets["GROQ_API_KEY"],
-    temperature=0.2,
-    model_name="llama3-8b-8192"
-)
-
+            api_key=os.getenv("GROQ_API_KEY", st.secrets["GROQ_API_KEY"]),
+            model_name="llama3-8b-8192",
+            temperature=0.2
+        )
 
         chain = ConversationalRetrievalChain.from_llm(
             llm=llm,
@@ -55,12 +53,16 @@ def initialize_pdf_qa_chain(pdf_files):
         )
         return chain
 
-# --- UI Logic ---
+# --- Streamlit UI Component ---
 def render_pdf_chat():
     st.markdown("## 📚 Ask Questions from Your PDFs")
     st.markdown("Upload one or more PDF files and ask anything about their content.")
 
-    uploaded_files = st.file_uploader("📄 Upload PDF file(s)", type=["pdf"], accept_multiple_files=True)
+    uploaded_files = st.file_uploader(
+        "📄 Upload PDF file(s)", 
+        type=["pdf"], 
+        accept_multiple_files=True
+    )
 
     if uploaded_files:
         chain = initialize_pdf_qa_chain(uploaded_files)
@@ -72,7 +74,6 @@ def render_pdf_chat():
             st.markdown("### 💡 Answer")
             st.success(result["answer"])
 
-            # Optional: Show source documents
             with st.expander("📖 Source Snippets"):
                 for doc in result["source_documents"]:
                     st.markdown(doc.page_content[:500] + "...")
