@@ -1,27 +1,17 @@
 # 📁 ui/pdf_chat_module.py
-
-import os
-import tempfile
-import streamlit as st
-from PyPDF2 import PdfReader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from chromadb import Client
+from chromadb.config import Settings
 from langchain_community.vectorstores import Chroma
 from langchain.embeddings import HuggingFaceEmbeddings
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from langchain_groq import ChatGroq
-from langchain_core.documents import Document
-from chromadb import HttpClient
-from chromadb.config import Settings
-__import__('pysqlite3')
-import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+import tempfile
+import os
+import streamlit as st
+from PyPDF2 import PdfReader
 
-
-# --- Force Chroma to use duckdb (avoid sqlite3 compatibility issues) ---
-os.environ["CHROMA_DB_IMPL"] = "duckdb"
-
-# --- Extract Text from Uploaded PDFs ---
 def extract_text_from_pdfs(uploaded_files):
     raw_text = ""
     for file in uploaded_files:
@@ -32,10 +22,6 @@ def extract_text_from_pdfs(uploaded_files):
         except Exception as e:
             st.error(f"Error reading {file.name}: {e}")
     return raw_text
-
-# --- Set Up Conversational Retrieval Chain ---
-# --- Set Up Conversational Retrieval Chain ---
-from chromadb.config import Settings  # <- add this import at the top
 
 def initialize_pdf_qa_chain(pdf_files):
     text = extract_text_from_pdfs(pdf_files)
@@ -50,16 +36,18 @@ def initialize_pdf_qa_chain(pdf_files):
 
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
+            # ✅ NEW Chroma Client (local, duckdb+parquet, avoids sqlite)
             settings = Settings(
-                chroma_api_impl="local",
                 chroma_db_impl="duckdb+parquet",
                 persist_directory=temp_dir
             )
-            chroma_client = HttpClient(settings=settings)
+            chroma_client = Client(settings)
 
+            # ✅ Create LangChain-compatible Chroma vectorstore
             vectorstore = Chroma.from_documents(
                 documents=docs,
                 embedding=embeddings,
+                persist_directory=temp_dir,
                 client=chroma_client,
                 collection_name="pdf_collection"
             )
@@ -89,7 +77,9 @@ def initialize_pdf_qa_chain(pdf_files):
                 memory=memory,
                 return_source_documents=True
             )
+
             return chain
+
     except Exception as e:
         st.error(f"Failed to initialize PDF QA chain: {e}")
         return None
