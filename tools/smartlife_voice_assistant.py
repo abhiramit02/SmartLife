@@ -121,6 +121,9 @@ def main():
                 temp_audio.write(uploaded_audio_file.read())
                 uploaded_audio = temp_audio.name
 
+    # ✅ Add this: Allow text input too
+    text_input = st.text_input("✍️ Or type your command here:")
+
     if uploaded_audio:
         try:
             command = speech_to_text(uploaded_audio, whisper_processor, whisper_model)
@@ -133,3 +136,15 @@ def main():
             st.audio(audio_data, format="audio/mp3")
         except Exception as e:
             st.error(f"❌ Error occurred: {e}")
+
+    elif text_input.strip():
+        try:
+            command = text_input.strip()
+            reply = get_response_from_model(command, blender_tokenizer, blender_model)
+            st.markdown(f"💬 Response: `{reply}`")
+
+            audio_data = speak_streamlit(reply)
+            st.audio(audio_data, format="audio/mp3")
+        except Exception as e:
+            st.error(f"❌ Error: {e}")
+
