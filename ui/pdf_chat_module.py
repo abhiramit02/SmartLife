@@ -4,9 +4,7 @@ import os
 import tempfile
 import streamlit as st
 from PyPDF2 import PdfReader
-from chromadb import Client
-from chromadb.config import Settings
-from langchain_community.vectorstores import Chroma
+from langchain_community.vectorstores import FAISS
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.memory import ConversationBufferMemory
@@ -18,13 +16,6 @@ from langchain_groq import ChatGroq
 @st.cache_resource
 def get_embeddings_model():
     return HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-
-@st.cache_resource
-def get_chroma_client():
-    return Client(Settings(
-        persist_directory="./chroma_db",
-        chroma_db_impl="duckdb+parquet"
-    ))
 
 @st.cache_data(show_spinner="Extracting PDF text...")
 def extract_text_from_pdfs(uploaded_files):
@@ -50,48 +41,35 @@ def initialize_pdf_qa_chain(pdf_files):
     embeddings = get_embeddings_model()
 
     try:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            settings = Settings(
-                chroma_db_impl="duckdb+parquet",
-                persist_directory=temp_dir
-            )
-            chroma_client = Client(settings)
+        # ✅ FAISS doesn't need external clients or directories
+        vectorstore = FAISS.from_documents(docs, embedding=embeddings)
+        retriever = vectorstore.as_retriever(search_type="similarity", k=4)
 
-            vectorstore = Chroma.from_documents(
-                documents=docs,
-                embedding=embeddings,
-                persist_directory=temp_dir,
-                client=chroma_client,
-                collection_name="pdf_collection"
-            )
+        memory = ConversationBufferMemory(
+            memory_key="chat_history",
+            return_messages=True,
+            output_key="answer"
+        )
 
-            retriever = vectorstore.as_retriever(search_type="similarity", k=4)
+        groq_api_key = os.getenv("GROQ_API_KEY") or st.secrets.get("GROQ_API_KEY", "")
+        if not groq_api_key:
+            st.error("GROQ API Key not found. Please set it in `.env` or `secrets.toml`.")
+            return None
 
-            memory = ConversationBufferMemory(
-                memory_key="chat_history",
-                return_messages=True,
-                output_key="answer"
-            )
+        llm = ChatGroq(
+            api_key=groq_api_key,
+            model_name="llama3-8b-8192",
+            temperature=0.2
+        )
 
-            groq_api_key = os.getenv("GROQ_API_KEY") or st.secrets.get("GROQ_API_KEY", "")
-            if not groq_api_key:
-                st.error("GROQ API Key not found. Please set it in `.env` or `secrets.toml`.")
-                return None
+        chain = ConversationalRetrievalChain.from_llm(
+            llm=llm,
+            retriever=retriever,
+            memory=memory,
+            return_source_documents=True
+        )
 
-            llm = ChatGroq(
-                api_key=groq_api_key,
-                model_name="llama3-8b-8192",
-                temperature=0.2
-            )
-
-            chain = ConversationalRetrievalChain.from_llm(
-                llm=llm,
-                retriever=retriever,
-                memory=memory,
-                return_source_documents=True
-            )
-
-            return chain
+        return chain
 
     except Exception as e:
         st.error(f"Failed to initialize PDF QA chain: {e}")
