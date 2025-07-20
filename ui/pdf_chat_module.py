@@ -1,4 +1,9 @@
 # 📁 ui/pdf_chat_module.py
+
+import os
+import tempfile
+import streamlit as st
+from PyPDF2 import PdfReader
 from chromadb import Client
 from chromadb.config import Settings
 from langchain_community.vectorstores import Chroma
@@ -7,22 +12,21 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from langchain_groq import ChatGroq
-import tempfile
-import os
-import streamlit as st
-from PyPDF2 import PdfReader
-import chromadb
-from chromadb.config import Settings
 
-# Initialize client (use a directory for persistence, or leave empty for in-memory)
-client = chromadb.Client(Settings(
-    persist_directory="./chroma_db",  # or "" for in-memory
-    chroma_db_impl="duckdb+parquet"
-))
+# --- Caching heavy resources ---
 
-collection = client.get_or_create_collection("my_collection")
+@st.cache_resource
+def get_embeddings_model():
+    return HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
+@st.cache_resource
+def get_chroma_client():
+    return Client(Settings(
+        persist_directory="./chroma_db",
+        chroma_db_impl="duckdb+parquet"
+    ))
 
+@st.cache_data(show_spinner="Extracting PDF text...")
 def extract_text_from_pdfs(uploaded_files):
     raw_text = ""
     for file in uploaded_files:
@@ -34,6 +38,7 @@ def extract_text_from_pdfs(uploaded_files):
             st.error(f"Error reading {file.name}: {e}")
     return raw_text
 
+
 def initialize_pdf_qa_chain(pdf_files):
     text = extract_text_from_pdfs(pdf_files)
     if not text.strip():
@@ -42,19 +47,16 @@ def initialize_pdf_qa_chain(pdf_files):
 
     splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=150)
     docs = splitter.create_documents([text])
-
-    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    embeddings = get_embeddings_model()
 
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
-            # ✅ NEW Chroma Client (local, duckdb+parquet, avoids sqlite)
             settings = Settings(
                 chroma_db_impl="duckdb+parquet",
                 persist_directory=temp_dir
             )
             chroma_client = Client(settings)
 
-            # ✅ Create LangChain-compatible Chroma vectorstore
             vectorstore = Chroma.from_documents(
                 documents=docs,
                 embedding=embeddings,
@@ -96,8 +98,8 @@ def initialize_pdf_qa_chain(pdf_files):
         return None
 
 
-
 # --- Streamlit UI Component ---
+
 def render_pdf_chat():
     st.markdown("## 📚 Ask Questions from Your PDFs")
     st.markdown("Upload one or more PDF files and ask anything about their content.")
@@ -109,11 +111,11 @@ def render_pdf_chat():
     )
 
     if uploaded_files:
-        chain = initialize_pdf_qa_chain(uploaded_files)
-        if chain:
-            query = st.text_input("❓ Ask a question from the PDF(s)", placeholder="e.g., What is the main topic in chapter 2?")
+        query = st.text_input("❓ Ask a question from the PDF(s)", placeholder="e.g., What is the main topic in chapter 2?")
 
-            if query:
+        if query:
+            chain = initialize_pdf_qa_chain(uploaded_files)
+            if chain:
                 try:
                     result = chain.invoke({"question": query})
                     st.markdown("### 💡 Answer")
@@ -128,5 +130,5 @@ def render_pdf_chat():
                                 st.write("⚠️ No text available in this source.")
                 except Exception as e:
                     st.error(f"Error processing the query: {e}")
-        else:
-            st.warning("PDF chain initialization failed.")
+            else:
+                st.warning("PDF chain initialization failed.")
