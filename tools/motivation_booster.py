@@ -1,6 +1,7 @@
 import random
 import os
 import requests
+import streamlit as st 
 
 # ✅ Spotify Playlists (fallbacks)
 spotify_playlists = [
@@ -25,7 +26,7 @@ nature_videos = [
 
 # ✅ Dynamic YouTube search via API
 def get_youtube_video_by_query(query):
-    api_key = os.getenv("YOUTUBE_API_KEY")
+    api_key = st.secrets["YOUTUBE_API_KEY"]  # ✅ Use st.secrets instead of os.getenv
     print(f"🔍 Searching YouTube for: {query}")
     search_url = "https://www.googleapis.com/youtube/v3/search"
     params = {
@@ -39,7 +40,6 @@ def get_youtube_video_by_query(query):
     try:
         res = requests.get(search_url, params=params)
         print("📦 Response status:", res.status_code)
-        print("📨 Response JSON:", res.json())
 
         if res.status_code == 200:
             items = res.json().get("items", [])
