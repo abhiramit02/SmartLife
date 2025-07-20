@@ -100,4 +100,36 @@ def voice_assistant():
 
 # ✅ Entry point for Streamlit
 def main():
-    return voice_assistant()
+    models = load_models()
+    whisper_processor, whisper_model = models["whisper"]
+    blender_tokenizer, blender_model = models["blender"]
+
+    st.title("🗣️ Voice Assistant")
+
+    uploaded_audio = None
+
+    if SOUND_AVAILABLE:
+        st.success("🎙️ Microphone support available on local machine.")
+        if st.button("Record and Respond"):
+            record_audio()
+            uploaded_audio = "user_input.wav"
+    else:
+        st.warning("⚠️ Microphone not supported on cloud. Please upload a WAV file.")
+        uploaded_audio_file = st.file_uploader("Upload your .wav file", type=["wav"])
+        if uploaded_audio_file:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
+                temp_audio.write(uploaded_audio_file.read())
+                uploaded_audio = temp_audio.name
+
+    if uploaded_audio:
+        try:
+            command = speech_to_text(uploaded_audio, whisper_processor, whisper_model)
+            st.markdown(f"📝 Transcription: `{command}`")
+
+            reply = get_response_from_model(command, blender_tokenizer, blender_model)
+            st.markdown(f"💬 Response: `{reply}`")
+
+            audio_data = speak_streamlit(reply)
+            st.audio(audio_data, format="audio/mp3")
+        except Exception as e:
+            st.error(f"❌ Error occurred: {e}")
