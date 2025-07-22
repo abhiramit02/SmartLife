@@ -9,18 +9,18 @@ from transformers import (
     BlenderbotTokenizer, BlenderbotForConditionalGeneration
 )
 
-# Try importing sounddevice (for local use only)
+# Microphone support (local only)
 try:
     import sounddevice as sd
     import scipy.io.wavfile as wav
     import torchaudio
     SOUND_AVAILABLE = True
-except (OSError, Exception):
+except Exception:
     SOUND_AVAILABLE = False
 
 SAMPLE_RATE = 16000
 DURATION = 5
-DEVICE = "cpu"  # Use CPU for Streamlit Cloud
+DEVICE = "cpu"
 
 @st.cache_resource
 def load_models():
@@ -36,12 +36,13 @@ def load_models():
     }
 
 def record_audio(filename="user_input.wav"):
+    st.info("🎤 Recording... Please speak into your mic.")
     recording = sd.rec(int(SAMPLE_RATE * DURATION), samplerate=SAMPLE_RATE, channels=1, dtype='int16')
     sd.wait()
     wav.write(filename, SAMPLE_RATE, recording)
+    return filename
 
 def speech_to_text(audio_path, processor, model):
-    import torchaudio
     speech_array, _ = torchaudio.load(audio_path)
     inputs = processor(speech_array.squeeze(), sampling_rate=SAMPLE_RATE, return_tensors="pt").to(DEVICE)
     predicted_ids = model.generate(**inputs, max_new_tokens=128, num_beams=3, early_stopping=True)
@@ -54,7 +55,7 @@ def get_response_from_model(user_input, tokenizer, model):
     response = tokenizer.decode(outputs[0], skip_special_tokens=True)
     return response.strip()
 
-def speak_streamlit(text):
+def speak_response(text):
     tts = gTTS(text=text, lang='en')
     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
         temp_path = fp.name
@@ -63,65 +64,16 @@ def speak_streamlit(text):
     os.remove(temp_path)
     return io.BytesIO(audio_bytes)
 
-def main():
-    st.title("🗣️ Voice Assistant")
+def run_voice_assistant():
+    if not SOUND_AVAILABLE:
+        return None, None, "❌ Microphone is not available. Run locally to use voice input."
 
     models = load_models()
     whisper_processor, whisper_model = models["whisper"]
     blender_tokenizer, blender_model = models["blender"]
 
-    st.markdown("### 🔧 Input Methods")
-    uploaded_audio = None
-
-    if SOUND_AVAILABLE:
-        st.success("🎙️ Microphone supported on local machine.")
-        if st.button("🎤 Record Voice"):
-            try:
-                record_audio()
-                uploaded_audio = "user_input.wav"
-                st.info("✅ Audio recorded. Ready for transcription.")
-            except Exception as e:
-                st.error(f"❌ Error during recording: {e}")
-    else:
-        st.warning("⚠️ Microphone not supported on Streamlit Cloud.")
-        uploaded_audio_file = st.file_uploader("📤 Upload a `.wav` file", type=["wav"])
-        if uploaded_audio_file:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
-                temp_audio.write(uploaded_audio_file.read())
-                uploaded_audio = temp_audio.name
-            st.info("✅ Audio uploaded.")
-
-    text_input = st.text_input("✍️ Or type your command here:")
-
-    if uploaded_audio:
-        try:
-            command = speech_to_text(uploaded_audio, whisper_processor, whisper_model)
-            st.markdown(f"📝 **Transcription:** `{command}`")
-
-            reply = get_response_from_model(command, blender_tokenizer, blender_model)
-            st.markdown(f"💬 **Response:** `{reply}`")
-
-            audio_data = speak_streamlit(reply)
-            st.audio(audio_data, format="audio/mp3")
-
-        except Exception as e:
-            st.error(f"❌ Error processing audio: {e}")
-
-    elif text_input.strip():
-        try:
-            command = text_input.strip()
-            st.markdown(f"📝 **Command:** `{command}`")
-
-            reply = get_response_from_model(command, blender_tokenizer, blender_model)
-            st.markdown(f"💬 **Response:** `{reply}`")
-
-            audio_data = speak_streamlit(reply)
-            st.audio(audio_data, format="audio/mp3")
-
-        except Exception as e:
-            st.error(f"❌ Error: {e}")
-    else:
-        st.info("🎧 Please upload audio or type your command.")
-
-if __name__ == "__main__":
-    main()
+    audio_path = record_audio()
+    command = speech_to_text(audio_path, whisper_processor, whisper_model)
+    reply = get_response_from_model(command, blender_tokenizer, blender_model)
+    audio_data = speak_response(reply)
+    return audio_data, command, reply
