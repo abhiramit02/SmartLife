@@ -35,13 +35,8 @@ from tools.motivation_booster import (
     get_youtube_video_by_query
 )
 import io
-from tools.smartlife_voice_assistant import (
-    run_voice_assistant,
-    record_audio,
-    speech_to_text,
-    get_response_from_model,
-    speak_streamlit
-)
+from tools.smartlife_voice_assistant import run_voice_assistant
+
 import streamlit as st
 from langchain_groq import ChatGroq
 from gtts import gTTS
