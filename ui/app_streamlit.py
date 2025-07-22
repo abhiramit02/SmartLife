@@ -36,7 +36,7 @@ from tools.motivation_booster import (
 )
 import io
 from tools.smartlife_voice_assistant import (
-    voice_assistant,
+    main,
     record_audio,
     speech_to_text,
     get_response_from_model,
@@ -634,20 +634,7 @@ elif feature == "📢 Voice Assistant":
         st.markdown("- *Motivate me!*")
 
         if st.button("🗣️ Speak Now"):
-            st.info("🎤 Listening... Please speak into your microphone.")
-            
-            try:
-                audio_data, command, reply = voice_assistant()
-                
-                if command is None:
-                    st.warning(reply)
-                else:
-                    st.write(f"🗣️ You said: **{command}**")
-                    st.success(f"🤖 SmartLife: {reply}")
-                    st.audio(audio_data, format="audio/wav")
-            
-            except Exception as e:
-                st.error(f"⚠️ Voice assistant error: {e}")
+            main()
                 
         if st.button("🏠 Go to Home"):
             st.session_state.selected_feature = "🏠 Home"
