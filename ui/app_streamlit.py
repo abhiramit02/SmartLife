@@ -36,7 +36,7 @@ from tools.motivation_booster import (
 )
 import io
 from tools.smartlife_voice_assistant import (
-    main,
+    run_voice_assistant,
     record_audio,
     speech_to_text,
     get_response_from_model,
@@ -628,33 +628,6 @@ elif feature == "📢 Voice Assistant":
 
     with col2:
         st.header("📢 Voice Assistant Mode")
-        st.markdown("🎤 Click below to activate voice assistant. Say something like:")
-        st.markdown("- *What's my schedule today?*")
-        st.markdown("- *Give me a diet tip*")
-        st.markdown("- *Motivate me!*")
-
-        if st.button("🗣️ Speak Now"):
-            main()
-                
-        if st.button("🏠 Go to Home"):
-            st.session_state.selected_feature = "🏠 Home"
-            st.rerun()
-elif feature == "📢 Voice Assistant":
-    col1, col2 = st.columns([6, 7])
-
-    with col1:
-        img_b64 = get_image_base64("assets/voice.png")
-        st.markdown(
-            f"""
-            <div style="height: 40vh; width: 100%; display: flex; align-items: stretch; justify-content: flex-start; margin-left: -16px;">
-                <img src="data:image/png;base64,{img_b64}" style="height: 60vh; width: 100%; object-fit: cover;">
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-    with col2:
-        st.header("📢 Voice Assistant Mode")
         st.markdown("🎤 Click below and speak a command like:")
         st.markdown("- *What's my schedule today?*")
         st.markdown("- *Motivate me!*")
@@ -673,9 +646,6 @@ elif feature == "📢 Voice Assistant":
         if st.button("🏠 Go to Home"):
             st.session_state.selected_feature = "🏠 Home"
             st.rerun()
-
-
-
 
 
 elif feature == "📄 PDF Q&A":
