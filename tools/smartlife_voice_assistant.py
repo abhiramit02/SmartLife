@@ -10,6 +10,7 @@ from transformers import (
 )
 import librosa
 import numpy as np
+import soundfile as sf
 
 DEVICE = "cpu"
 SAMPLE_RATE = 16000
@@ -54,24 +55,29 @@ def run_voice_assistant(uploaded_file):
     whisper_processor, whisper_model = models["whisper"]
     blender_tokenizer, blender_model = models["blender"]
 
-    if uploaded_file is not None:
-        if uploaded_file.type != "audio/wav":
-            return None, None, "⚠️ Please upload a valid WAV audio file."
-
-        try:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-                tmp.write(uploaded_file.read())
-                tmp_path = tmp.name
-
-            command = speech_to_text(tmp_path, whisper_processor, whisper_model)
-            reply = get_response_from_model(command, blender_tokenizer, blender_model)
-            audio_data = speak_response(reply)
-
-            return audio_data, command, reply
-
-        except Exception as e:
-            return None, None, f"⚠️ Processing Error: {e}"
-
-    else:
+    if uploaded_file is None:
         return None, None, "⚠️ Please upload a WAV audio file."
+
+    if uploaded_file.type != "audio/wav":
+        return None, None, "⚠️ Please upload a valid WAV audio file."
+
+    try:
+        # Save uploaded file properly using soundfile to ensure valid headers
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+            tmp.write(uploaded_file.read())
+            tmp_path = tmp.name
+
+        # Optional: Re-save file with soundfile to fix headers (recommended)
+        data, sr = librosa.load(tmp_path, sr=SAMPLE_RATE)
+        sf.write(tmp_path, data, sr)
+
+        # Now call speech to text
+        command = speech_to_text(tmp_path, whisper_processor, whisper_model)
+        reply = get_response_from_model(command, blender_tokenizer, blender_model)
+        audio_data = speak_response(reply)
+
+        return audio_data, command, reply
+
+    except Exception as e:
+        return None, None, f"⚠️ Processing Error: {e}"
 
