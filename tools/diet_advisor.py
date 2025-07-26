@@ -8,15 +8,30 @@ def diet_suggestion(llm):
 
     st.markdown("💬 _Tell us what you’ve eaten today. Leave blank if you skipped or haven't eaten that meal yet._")
 
-    breakfast = st.text_input("🍳 Breakfast (e.g., Idli and chutney)")
-    snack = st.text_input("🍪 Snacks (e.g., biscuits, banana)")
-    lunch = st.text_input("🍛 Lunch (e.g., rice, dal, chicken curry)")
+    # Store inputs in session state to persist across interactions
+    if 'breakfast' not in st.session_state:
+        st.session_state.breakfast = ""
+    if 'snack' not in st.session_state:
+        st.session_state.snack = ""
+    if 'lunch' not in st.session_state:
+        st.session_state.lunch = ""
+    if 'dinner' not in st.session_state:
+        st.session_state.dinner = ""
 
-    dinner = ""
+    st.session_state.breakfast = st.text_input("🍳 Breakfast (e.g., Idli and chutney)", value=st.session_state.breakfast)
+    st.session_state.snack = st.text_input("🍪 Snacks (e.g., biscuits, banana)", value=st.session_state.snack)
+    st.session_state.lunch = st.text_input("🍛 Lunch (e.g., rice, dal, chicken curry)", value=st.session_state.lunch)
+
     if current_hour >= 17:
-        dinner = st.text_input("🍽️ Dinner (e.g., chapati, paneer)")
+        st.session_state.dinner = st.text_input("🍽️ Dinner (e.g., chapati, paneer)", value=st.session_state.dinner)
 
     if st.button("🧾 Get My Diet Feedback"):
+        # Capture current values safely
+        breakfast = st.session_state.breakfast
+        snack = st.session_state.snack
+        lunch = st.session_state.lunch
+        dinner = st.session_state.dinner if current_hour >= 17 else ""
+
         if not any([breakfast, snack, lunch, dinner]):
             st.warning("Please enter at least one meal to analyze your diet.")
         else:
@@ -47,4 +62,4 @@ Now generate a markdown-styled diet feedback.
             feedback_text = getattr(feedback_result, "content", str(feedback_result))
 
             st.success("🍽️ Here's your personalized diet feedback:")
-            st.markdown(feedback_text, unsafe_allow_html=True)  # 👈 now markdown is rendered properly
+            st.markdown(feedback_text, unsafe_allow_html=True)
