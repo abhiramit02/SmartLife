@@ -34,7 +34,7 @@ from tools.motivation_booster import (
     get_youtube_video_by_query
 )
 import io
-from tools.smartlife_voice_assistant import run_voice_assistant
+from tools.smartlife_voice_assistant import run_voice_assistant_from_upload
 
 import streamlit as st
 from langchain_groq import ChatGroq
@@ -622,20 +622,25 @@ elif feature == "📢 Voice Assistant":
 
     with col2:
         st.header("📢 Voice Assistant Mode")
-        st.markdown("🎤 Click below and speak a command like:")
+        st.markdown("🎤 Upload a `.wav` file with your voice command")
         st.markdown("- *What's my schedule today?*")
         st.markdown("- *Motivate me!*")
 
-        if st.button("🗣️ Speak Now"):
-            with st.spinner("🔄 Processing your voice..."):
-                audio_data, command, reply = run_voice_assistant()
+        uploaded_file = st.file_uploader("🔊 Upload your voice (WAV format)", type=["wav"])
 
-            if command is None:
-                st.warning(reply)
+        if st.button("🗣️ Submit Voice Command"):
+            if uploaded_file is None:
+                st.warning("⚠️ Please upload a `.wav` file before clicking.")
             else:
-                st.write(f"🗣️ You said: **{command}**")
-                st.success(f"🤖 SmartLife: {reply}")
-                st.audio(audio_data, format="audio/mp3")
+                with st.spinner("🔄 Processing your voice..."):
+                    audio_data, command, reply = run_voice_assistant_from_upload(uploaded_file)
+
+                if command is None:
+                    st.warning(reply)
+                else:
+                    st.write(f"🗣️ You said: **{command}**")
+                    st.success(f"🤖 SmartLife: {reply}")
+                    st.audio(audio_data, format="audio/mp3")
 
         if st.button("🏠 Go to Home"):
             st.session_state.selected_feature = "🏠 Home"

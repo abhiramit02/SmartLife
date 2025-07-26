@@ -48,30 +48,19 @@ def speak_response(text):
     os.remove(temp_path)
     return io.BytesIO(audio_bytes)
 
-def run_voice_assistant():
-    st.header("🗣️ Voice Assistant (Cloud Compatible)")
-
+def run_voice_assistant_from_upload(uploaded_file):
     models = load_models()
     whisper_processor, whisper_model = models["whisper"]
     blender_tokenizer, blender_model = models["blender"]
 
-    st.markdown("🎤 Upload a `.wav` file recorded with your voice (16kHz preferred)")
-    audio_file = st.file_uploader("Upload WAV audio", type=["wav"])
-
-    if audio_file is not None:
+    if uploaded_file is not None:
         with open("uploaded_audio.wav", "wb") as f:
-            f.write(audio_file.read())
+            f.write(uploaded_file.read())
 
-        # Convert voice to text
         command = speech_to_text("uploaded_audio.wav", whisper_processor, whisper_model)
-
-        # Get chatbot response
         reply = get_response_from_model(command, blender_tokenizer, blender_model)
-
-        # Speak response
         audio_data = speak_response(reply)
 
-        # Display everything
-        st.markdown(f"🗨️ **You said:** `{command}`")
-        st.markdown(f"🤖 **Bot replied:** `{reply}`")
-        st.audio(audio_data, format="audio/mp3")
+        return audio_data, command, reply
+    else:
+        return None, None, "⚠️ Please upload a WAV audio file."
