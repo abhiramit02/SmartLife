@@ -19,7 +19,6 @@ import tempfile
 
 import datetime
 from tools.calendar_tool import add_task, get_tasks, complete_task, get_motivation
-from tools.smartlife_voice_assistant import voice_assistant
 from tools.smartlife_features import (
     get_random_wellness_tip,
     get_random_diet_tip,
@@ -35,7 +34,7 @@ from tools.motivation_booster import (
     get_youtube_video_by_query
 )
 import io
-
+from tools.smartlife_voice_assistant import run_voice_assistant
 
 import streamlit as st
 from langchain_groq import ChatGroq
@@ -611,7 +610,7 @@ elif feature == "📢 Voice Assistant":
     col1, col2 = st.columns([6, 7])
 
     with col1:
-        img_b64 = get_image_base64("D:/SmartLife/assets/voice.png")
+        img_b64 = get_image_base64("assets/voice.png")
         st.markdown(
             f"""
             <div style="height: 40vh; width: 100%; display: flex; align-items: stretch; justify-content: flex-start; margin-left: -16px;">
@@ -623,31 +622,24 @@ elif feature == "📢 Voice Assistant":
 
     with col2:
         st.header("📢 Voice Assistant Mode")
-        st.markdown("🎤 Click below to activate voice assistant. Say something like:")
+        st.markdown("🎤 Click below and speak a command like:")
         st.markdown("- *What's my schedule today?*")
-        st.markdown("- *Give me a diet tip*")
         st.markdown("- *Motivate me!*")
 
         if st.button("🗣️ Speak Now"):
-            st.info("🎤 Listening... Please speak into your microphone.")
-            
-            try:
-                audio_data, command, reply = voice_assistant()
-                
-                if command is None:
-                    st.warning(reply)
-                else:
-                    st.write(f"🗣️ You said: **{command}**")
-                    st.success(f"🤖 SmartLife: {reply}")
-                    st.audio(audio_data, format="audio/wav")
-            
-            except Exception as e:
-                st.error(f"⚠️ Voice assistant error: {e}")
-                
+            with st.spinner("🔄 Processing your voice..."):
+                audio_data, command, reply = run_voice_assistant()
+
+            if command is None:
+                st.warning(reply)
+            else:
+                st.write(f"🗣️ You said: **{command}**")
+                st.success(f"🤖 SmartLife: {reply}")
+                st.audio(audio_data, format="audio/mp3")
+
         if st.button("🏠 Go to Home"):
             st.session_state.selected_feature = "🏠 Home"
             st.rerun()
-
 
 
 elif feature == "📄 PDF Q&A":
