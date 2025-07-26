@@ -19,6 +19,7 @@ import tempfile
 
 import datetime
 from tools.calendar_tool import add_task, get_tasks, complete_task, get_motivation
+from tools.smartlife_voice_assistant import voice_assistant
 from tools.smartlife_features import (
     get_random_wellness_tip,
     get_random_diet_tip,
@@ -34,7 +35,7 @@ from tools.motivation_booster import (
     get_youtube_video_by_query
 )
 import io
-from tools.smartlife_voice_assistant import voice_assistant
+
 
 import streamlit as st
 from langchain_groq import ChatGroq
