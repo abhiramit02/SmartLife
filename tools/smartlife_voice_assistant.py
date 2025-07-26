@@ -4,13 +4,11 @@ import tempfile
 import streamlit as st
 from gtts import gTTS
 import torch
-import torchaudio
 from transformers import (
     AutoProcessor, AutoModelForSpeechSeq2Seq,
     BlenderbotTokenizer, BlenderbotForConditionalGeneration
 )
-from streamlit_webrtc import webrtc_streamer, AudioProcessorBase
-import av
+import torchaudio
 
 DEVICE = "cpu"
 SAMPLE_RATE = 16000
@@ -50,43 +48,29 @@ def speak_response(text):
     os.remove(temp_path)
     return io.BytesIO(audio_bytes)
 
-class AudioRecorder(AudioProcessorBase):
-    def __init__(self) -> None:
-        self.audio_data = b""
-
-    def recv(self, frame: av.AudioFrame) -> av.AudioFrame:
-        pcm = frame.to_ndarray().tobytes()
-        self.audio_data += pcm
-        return frame
-
-# Streamlit UI
-st.title("🎙️ Voice Assistant")
-
-ctx = webrtc_streamer(
-    key="speech",
-    mode="SENDONLY",
-    in_audio_enabled=True,
-    audio_processor_factory=AudioRecorder,
-    media_stream_constraints={"audio": True, "video": False},
-)
-
-if ctx.audio_processor and st.button("Process Voice Input"):
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
-        f.write(ctx.audio_processor.audio_data)
-        audio_path = f.name
-
+def run_voice_assistant(uploaded_file):
     models = load_models()
     whisper_processor, whisper_model = models["whisper"]
     blender_tokenizer, blender_model = models["blender"]
 
-    try:
-        command = speech_to_text(audio_path, whisper_processor, whisper_model)
-        st.success(f"🗣️ You said: {command}")
-        reply = get_response_from_model(command, blender_tokenizer, blender_model)
-        st.info(f"🤖 Assistant: {reply}")
+    if uploaded_file is not None:
+        if uploaded_file.type != "audio/wav":
+            return None, None, "⚠️ Please upload a valid WAV audio file."
 
-        audio_response = speak_response(reply)
-        st.audio(audio_response, format="audio/mp3")
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+                tmp.write(uploaded_file.read())
+                tmp_path = tmp.name
 
-    except Exception as e:
-        st.error(f"❌ Error: {e}")
+            command = speech_to_text(tmp_path, whisper_processor, whisper_model)
+            reply = get_response_from_model(command, blender_tokenizer, blender_model)
+            audio_data = speak_response(reply)
+
+            return audio_data, command, reply
+
+        except Exception as e:
+            return None, None, f"⚠️ Processing Error: {e}"
+
+    else:
+        return None, None, "⚠️ Please upload a WAV audio file."
+
