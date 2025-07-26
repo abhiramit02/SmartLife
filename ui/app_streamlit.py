@@ -34,7 +34,7 @@ from tools.motivation_booster import (
     get_youtube_video_by_query
 )
 import io
-from tools.smartlife_voice_assistant import run_voice_assistant_from_upload
+from tools.smartlife_voice_assistant import run_voice_assistant
 
 import streamlit as st
 from langchain_groq import ChatGroq
@@ -633,7 +633,7 @@ elif feature == "📢 Voice Assistant":
                 st.warning("⚠️ Please upload a `.wav` file before clicking.")
             else:
                 with st.spinner("🔄 Processing your voice..."):
-                    audio_data, command, reply = run_voice_assistant_from_upload(uploaded_file)
+                    audio_data, command, reply = run_voice_assistant(uploaded_file)
 
                 if command is None:
                     st.warning(reply)

@@ -48,7 +48,7 @@ def speak_response(text):
     os.remove(temp_path)
     return io.BytesIO(audio_bytes)
 
-def run_voice_assistant_from_upload(uploaded_file):
+def run_voice_assistant(uploaded_file):
     models = load_models()
     whisper_processor, whisper_model = models["whisper"]
     blender_tokenizer, blender_model = models["blender"]
