@@ -8,7 +8,8 @@ from transformers import (
     AutoProcessor, AutoModelForSpeechSeq2Seq,
     BlenderbotTokenizer, BlenderbotForConditionalGeneration
 )
-import torchaudio
+import librosa
+import numpy as np
 
 DEVICE = "cpu"
 SAMPLE_RATE = 16000
@@ -27,8 +28,8 @@ def load_models():
     }
 
 def speech_to_text(audio_path, processor, model):
-    speech_array, _ = torchaudio.load(audio_path)
-    inputs = processor(speech_array.squeeze(), sampling_rate=SAMPLE_RATE, return_tensors="pt").to(DEVICE)
+    speech_array, _ = librosa.load(audio_path, sr=SAMPLE_RATE)
+    inputs = processor(np.array(speech_array), sampling_rate=SAMPLE_RATE, return_tensors="pt").to(DEVICE)
     predicted_ids = model.generate(**inputs, max_new_tokens=128, num_beams=3, early_stopping=True)
     transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)[0]
     return transcription.strip()
