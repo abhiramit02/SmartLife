@@ -639,13 +639,7 @@ elif feature == "📢 Voice Assistant":
                 try:
                     with st.spinner("🔄 Processing your voice..."):
                         # Save uploaded file temporarily
-                        import tempfile
-                        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-                            tmp.write(uploaded_file.read())
-                            tmp_path = tmp.name
-
-                        # Pass path to your assistant function
-                        audio_data, command, reply = run_voice_assistant(tmp_path)
+                        audio_data, command, reply = run_voice_assistant(uploaded_file)
 
                     if command:
                         st.markdown(f"**🗣️ You said:** {command}")
