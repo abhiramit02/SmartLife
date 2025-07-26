@@ -96,5 +96,4 @@ def voice_assistant():
         return None, None, "❌ CUDA Out of Memory. Try restarting your app or switch to CPU execution."
 
 # ✅ Call this from your Streamlit app: tools/smartlife_voice_assistant.py
-def main():
-    return voice_assistant()
+
