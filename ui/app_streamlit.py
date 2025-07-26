@@ -12,7 +12,6 @@ from langchain.memory import ConversationBufferMemory
 from ui.pdf_chat_module import render_pdf_chat
 from tools.diet_advisor import diet_suggestion
 from dotenv import load_dotenv
-
 from ui.login_page import login_page
 from ui.signup_page import signup_page
 
