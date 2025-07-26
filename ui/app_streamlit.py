@@ -34,14 +34,7 @@ from tools.motivation_booster import (
     get_youtube_video_by_query
 )
 import io
-from tools.smartlife_voice_assistant import (
-     webrtc_streamer,
-    AudioRecorder,
-    save_pcm_to_wav,
-    run_voice_assistant_from_wav_path,
-    run_voice_assistant
-    
-)
+from tools.smartlife_voice_assistant import run_voice_assistant
 
 import streamlit as st
 from langchain_groq import ChatGroq
@@ -629,63 +622,35 @@ elif feature == "📢 Voice Assistant":
 
     with col2:
         st.header("📢 Voice Assistant Mode")
+        st.markdown("🎤 Upload a `.wav` file with your voice command")
+        st.markdown("- *What's my schedule today?*")
+        st.markdown("- *Motivate me!*")
 
-        tab_rec, tab_upload = st.tabs(["🎙️ Record in Browser", "📁 Upload .wav"])
+        uploaded_file = st.file_uploader("🔊 Upload your voice (WAV format)", type=["wav"])
 
-        # ========== TAB 1: RECORD IN BROWSER ==========
-        with tab_rec:
-            st.markdown("Record right here and get a spoken reply back!")
-            ctx = webrtc_streamer(
-                key="speech",
-                mode="SENDONLY",
-                in_audio_enabled=True,
-                audio_processor_factory=AudioRecorder,
-                media_stream_constraints={"audio": True, "video": False},
-            )
+        if uploaded_file is not None:
+            st.write(f"✅ File uploaded: `{uploaded_file.name}`")
+            st.write(f"📄 File type: `{uploaded_file.type}`")
 
-            if ctx.audio_processor and st.button("🗣️ Process Recorded Voice"):
-                if not ctx.audio_processor.audio_bytes:
-                    st.warning("No audio captured yet. Please speak and try again.")
-                else:
+        if st.button("🗣️ Submit Voice Command"):
+            if uploaded_file is None:
+                st.warning("⚠️ Please upload a `.wav` file before clicking.")
+            else:
+                try:
                     with st.spinner("🔄 Processing your voice..."):
-                        # write PCM bytes to a valid wav file
-                        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-                            tmp_path = tmp.name
-                        save_pcm_to_wav(ctx.audio_processor.audio_bytes, tmp_path)
-
-                        try:
-                            audio_data, command, reply = run_voice_assistant_from_wav_path(tmp_path)
-                            st.markdown(f"**🗣️ You said:** {command}")
-                            st.markdown(f"**🤖 SmartLife:** {reply}")
-                            st.audio(audio_data, format="audio/mp3")
-                        except Exception as e:
-                            st.error("❌ Error while processing the recorded voice.")
-                            st.exception(e)
-                        finally:
-                            os.remove(tmp_path)
-
-        # ========== TAB 2: UPLOAD .WAV ==========
-        with tab_upload:
-            st.markdown("🎤 Upload a `.wav` file with your voice command")
-            uploaded_file = st.file_uploader("🔊 Upload your voice (WAV format)", type=["wav"])
-
-            if uploaded_file is not None:
-                st.write(f"✅ File uploaded: `{uploaded_file.name}`")
-                st.write(f"📄 File type: `{uploaded_file.type}`")
-
-            if st.button("🗣️ Submit Voice Command"):
-                if uploaded_file is None:
-                    st.warning("⚠️ Please upload a `.wav` file before clicking.")
-                else:
-                    with st.spinner("🔄 Processing your voice..."):
+                        # Save uploaded file temporarily
                         audio_data, command, reply = run_voice_assistant(uploaded_file)
 
                     if command:
                         st.markdown(f"**🗣️ You said:** {command}")
                         st.markdown(f"**🤖 SmartLife:** {reply}")
-                        st.audio(audio_data, format="audio/mp3")
+                        st.audio(audio_data, format="audio/wav")  # Update if your output format is mp3
                     else:
                         st.warning(reply)
+
+                except Exception as e:
+                    st.error("❌ Error while processing the voice command.")
+                    st.exception(e)  # Show detailed traceback for debugging
 
         if st.button("🏠 Go to Home"):
             st.session_state.selected_feature = "🏠 Home"
