@@ -8,29 +8,15 @@ def diet_suggestion(llm):
 
     st.markdown("💬 _Tell us what you’ve eaten today. Leave blank if you skipped or haven't eaten that meal yet._")
 
-    # Use temporary variables, do NOT assign directly to session_state
-    breakfast_input = st.text_input("🍳 Breakfast (e.g., Idli and chutney)", value=st.session_state.get('breakfast', ''))
-    snack_input = st.text_input("🍪 Snacks (e.g., biscuits, banana)", value=st.session_state.get('snack', ''))
-    lunch_input = st.text_input("🍛 Lunch (e.g., rice, dal, chicken curry)", value=st.session_state.get('lunch', ''))
+    breakfast = st.text_input("🍳 Breakfast (e.g., Idli and chutney)")
+    snack = st.text_input("🍪 Snacks (e.g., biscuits, banana)")
+    lunch = st.text_input("🍛 Lunch (e.g., rice, dal, chicken curry)")
 
-    dinner_input = ""
+    dinner = ""
     if current_hour >= 17:
-        dinner_input = st.text_input("🍽️ Dinner (e.g., chapati, paneer)", value=st.session_state.get('dinner', ''))
+        dinner = st.text_input("🍽️ Dinner (e.g., chapati, paneer)")
 
     if st.button("🧾 Get My Diet Feedback"):
-        # Store inputs only when button is clicked
-        st.session_state.breakfast = breakfast_input
-        st.session_state.snack = snack_input
-        st.session_state.lunch = lunch_input
-        if current_hour >= 17:
-            st.session_state.dinner = dinner_input
-
-        # Get current input values from session state
-        breakfast = st.session_state.breakfast
-        snack = st.session_state.snack
-        lunch = st.session_state.lunch
-        dinner = st.session_state.dinner if current_hour >= 17 else ""
-
         if not any([breakfast, snack, lunch, dinner]):
             st.warning("Please enter at least one meal to analyze your diet.")
         else:
@@ -56,8 +42,9 @@ Here are the user's meals:
 Now generate a markdown-styled diet feedback.
 """
 
+            # Get response
             feedback_result = llm.invoke(diet_prompt)
             feedback_text = getattr(feedback_result, "content", str(feedback_result))
 
             st.success("🍽️ Here's your personalized diet feedback:")
-            st.markdown(feedback_text, unsafe_allow_html=True)
+            st.markdown(feedback_text, unsafe_allow_html=True)  # 👈 now markdown is rendered properly
