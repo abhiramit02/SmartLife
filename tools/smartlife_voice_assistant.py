@@ -8,19 +8,10 @@ from transformers import (
     AutoProcessor, AutoModelForSpeechSeq2Seq,
     BlenderbotTokenizer, BlenderbotForConditionalGeneration
 )
+import torchaudio
 
-# Microphone support (local only)
-try:
-    import sounddevice as sd
-    import scipy.io.wavfile as wav
-    import torchaudio
-    SOUND_AVAILABLE = True
-except Exception:
-    SOUND_AVAILABLE = False
-
-SAMPLE_RATE = 16000
-DURATION = 5
 DEVICE = "cpu"
+SAMPLE_RATE = 16000
 
 @st.cache_resource
 def load_models():
@@ -34,13 +25,6 @@ def load_models():
         "whisper": (whisper_processor, whisper_model),
         "blender": (blender_tokenizer, blender_model)
     }
-
-def record_audio(filename="user_input.wav"):
-    st.info("🎤 Recording... Please speak into your mic.")
-    recording = sd.rec(int(SAMPLE_RATE * DURATION), samplerate=SAMPLE_RATE, channels=1, dtype='int16')
-    sd.wait()
-    wav.write(filename, SAMPLE_RATE, recording)
-    return filename
 
 def speech_to_text(audio_path, processor, model):
     speech_array, _ = torchaudio.load(audio_path)
@@ -65,15 +49,29 @@ def speak_response(text):
     return io.BytesIO(audio_bytes)
 
 def run_voice_assistant():
-    if not SOUND_AVAILABLE:
-        return None, None, "❌ Microphone is not available. Run locally to use voice input."
+    st.header("🗣️ Voice Assistant (Cloud Compatible)")
 
     models = load_models()
     whisper_processor, whisper_model = models["whisper"]
     blender_tokenizer, blender_model = models["blender"]
 
-    audio_path = record_audio()
-    command = speech_to_text(audio_path, whisper_processor, whisper_model)
-    reply = get_response_from_model(command, blender_tokenizer, blender_model)
-    audio_data = speak_response(reply)
-    return audio_data, command, reply
+    st.markdown("🎤 Upload a `.wav` file recorded with your voice (16kHz preferred)")
+    audio_file = st.file_uploader("Upload WAV audio", type=["wav"])
+
+    if audio_file is not None:
+        with open("uploaded_audio.wav", "wb") as f:
+            f.write(audio_file.read())
+
+        # Convert voice to text
+        command = speech_to_text("uploaded_audio.wav", whisper_processor, whisper_model)
+
+        # Get chatbot response
+        reply = get_response_from_model(command, blender_tokenizer, blender_model)
+
+        # Speak response
+        audio_data = speak_response(reply)
+
+        # Display everything
+        st.markdown(f"🗨️ **You said:** `{command}`")
+        st.markdown(f"🤖 **Bot replied:** `{reply}`")
+        st.audio(audio_data, format="audio/mp3")
