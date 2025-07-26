@@ -628,23 +628,40 @@ elif feature == "📢 Voice Assistant":
 
         uploaded_file = st.file_uploader("🔊 Upload your voice (WAV format)", type=["wav"])
 
+        if uploaded_file is not None:
+            st.write(f"✅ File uploaded: `{uploaded_file.name}`")
+            st.write(f"📄 File type: `{uploaded_file.type}`")
+
         if st.button("🗣️ Submit Voice Command"):
             if uploaded_file is None:
                 st.warning("⚠️ Please upload a `.wav` file before clicking.")
             else:
-                with st.spinner("🔄 Processing your voice..."):
-                    audio_data, command, reply = run_voice_assistant(uploaded_file)
+                try:
+                    with st.spinner("🔄 Processing your voice..."):
+                        # Save uploaded file temporarily
+                        import tempfile
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+                            tmp.write(uploaded_file.read())
+                            tmp_path = tmp.name
 
-                if command is None:
-                    st.warning(reply)
-                else:
-                    st.write(f"🗣️ You said: **{command}**")
-                    st.success(f"🤖 SmartLife: {reply}")
-                    st.audio(audio_data, format="audio/mp3")
+                        # Pass path to your assistant function
+                        audio_data, command, reply = run_voice_assistant(tmp_path)
+
+                    if command:
+                        st.markdown(f"**🗣️ You said:** {command}")
+                        st.markdown(f"**🤖 SmartLife:** {reply}")
+                        st.audio(audio_data, format="audio/wav")  # Update if your output format is mp3
+                    else:
+                        st.warning(reply)
+
+                except Exception as e:
+                    st.error("❌ Error while processing the voice command.")
+                    st.exception(e)  # Show detailed traceback for debugging
 
         if st.button("🏠 Go to Home"):
             st.session_state.selected_feature = "🏠 Home"
             st.rerun()
+
 
 
 elif feature == "📄 PDF Q&A":

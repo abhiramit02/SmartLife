@@ -57,18 +57,20 @@ def run_voice_assistant(uploaded_file):
         if uploaded_file.type != "audio/wav":
             return None, None, "⚠️ Please upload a valid WAV audio file."
 
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-            tmp.write(uploaded_file.read())
-            tmp_path = tmp.name
-
         try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+                tmp.write(uploaded_file.read())
+                tmp_path = tmp.name
+
             command = speech_to_text(tmp_path, whisper_processor, whisper_model)
             reply = get_response_from_model(command, blender_tokenizer, blender_model)
             audio_data = speak_response(reply)
-        except Exception as e:
-            return None, None, f"⚠️ Error processing file: {e}"
 
-        return audio_data, command, reply
+            return audio_data, command, reply
+
+        except Exception as e:
+            return None, None, f"⚠️ Processing Error: {e}"
+
     else:
         return None, None, "⚠️ Please upload a WAV audio file."
 
