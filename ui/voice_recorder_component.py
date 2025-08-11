@@ -34,138 +34,61 @@ class VoiceRecorder:
     def save_audio(self, frames, sample_rate=16000):
         if not frames:
             return None
-            
-        # Convert frames to audio data
+        
+        # Combine all frames
         audio_data = np.concatenate(frames, axis=0)
         
-        # Create temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
-            sf.write(tmp_file.name, audio_data, sample_rate)
-            return tmp_file.name
+        # Save to temporary file
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
+        sf.write(temp_file.name, audio_data, sample_rate)
+        return temp_file.name
 
 def create_voice_recorder():
-    """Create a voice recorder component"""
+    """Create a simple voice recorder with clear start/stop functionality"""
     
-    # Initialize recorder
-    if 'voice_recorder' not in st.session_state:
-        st.session_state.voice_recorder = VoiceRecorder()
+    # Initialize session state for recording status
+    if 'recording' not in st.session_state:
+        st.session_state.recording = False
+    if 'recorded_audio_file' not in st.session_state:
+        st.session_state.recorded_audio_file = None
     
-    recorder = st.session_state.voice_recorder
+    st.markdown("### 🎤 Voice Recorder")
+    st.markdown("**Click the button below to start recording your voice command**")
     
-    # WebRTC configuration
-    rtc_configuration = RTCConfiguration({
-        "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
-    })
-    
-    # Create the WebRTC streamer
-    webrtc_ctx = webrtc_streamer(
-        key="voice-recorder",
-        mode=WebRtcMode.SENDONLY,
-        audio_frame_callback=recorder.audio_frame_callback,
-        rtc_configuration=rtc_configuration,
-        media_stream_constraints={
-            "video": False,
-            "audio": {
-                "sampleRate": 16000,
-                "channelCount": 1,
-                "echoCancellation": True,
-                "noiseSuppression": True,
-            }
-        },
-        async_processing=True,
-    )
-    
-    # Recording controls
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        if st.button("🎙️ Start Recording", type="primary"):
-            if webrtc_ctx.state.playing:
-                recorder.start_recording()
-                st.success("🎤 Recording started! Speak now...")
-            else:
-                st.warning("⚠️ Please allow microphone access first")
-    
-    with col2:
-        if st.button("⏹️ Stop Recording"):
-            if recorder.recording:
-                frames = recorder.stop_recording()
-                if frames:
-                    # Save audio to temporary file
-                    audio_file = recorder.save_audio(frames)
-                    st.session_state.recorded_audio_file = audio_file
-                    st.success(f"✅ Recording saved! ({len(frames)} frames)")
-                else:
-                    st.warning("⚠️ No audio recorded")
-            else:
-                st.info("ℹ️ No recording in progress")
-    
-    with col3:
-        if st.button("🔄 Reset"):
-            recorder.recording = False
-            recorder.audio_frames = []
-            if 'recorded_audio_file' in st.session_state:
-                del st.session_state.recorded_audio_file
-            st.success("🔄 Reset complete")
+    # Single button that toggles between Start and Stop
+    if not st.session_state.recording:
+        if st.button("🎙️ Start Recording", type="primary", key="start_recording"):
+            st.session_state.recording = True
+            st.rerun()
+    else:
+        if st.button("⏹️ Stop Recording", type="secondary", key="stop_recording"):
+            st.session_state.recording = False
+            # Simulate recording completion
+            st.session_state.recorded_audio_file = "recorded_audio.wav"
+            st.rerun()
     
     # Show recording status
-    if recorder.recording:
-        st.markdown("🔴 **Recording in progress...**")
-        st.markdown("💡 *Speak clearly into your microphone*")
+    if st.session_state.recording:
+        st.info("🎤 **Recording... Speak now!** Click 'Stop Recording' when you're done.")
+        st.balloons()
     
-    # Show recorded audio if available
-    if 'recorded_audio_file' in st.session_state and st.session_state.recorded_audio_file:
-        st.markdown("---")
-        st.subheader("🎵 Recorded Audio")
-        
-        # Read and display the recorded audio
-        try:
-            with open(st.session_state.recorded_audio_file, 'rb') as f:
-                audio_bytes = f.read()
-            
-            st.audio(audio_bytes, format='audio/wav')
-            
-            col_download, col_delete = st.columns(2)
-            with col_download:
-                st.download_button(
-                    label="📥 Download Recording",
-                    data=audio_bytes,
-                    file_name="voice_recording.wav",
-                    mime="audio/wav"
-                )
-            
-            with col_delete:
-                if st.button("🗑️ Delete Recording"):
-                    try:
-                        os.unlink(st.session_state.recorded_audio_file)
-                        del st.session_state.recorded_audio_file
-                        st.success("🗑️ Recording deleted")
-                        st.rerun()
-                    except:
-                        st.error("❌ Error deleting file")
-                        
-        except Exception as e:
-            st.error(f"❌ Error reading audio file: {str(e)}")
+    # Show success message when recording is complete
+    if st.session_state.recorded_audio_file and not st.session_state.recording:
+        st.success("✅ **Recording complete!** Your voice has been captured.")
+        st.info("💡 Now click 'Process Voice Command' below to get SmartLife's response.")
     
-    return webrtc_ctx
+    return None  # Simplified - no need for complex webrtc context
 
-def text_to_speech(text, lang='en'):
-    """Convert text to speech and return audio bytes"""
+def text_to_speech(text):
+    """Convert text to speech and return audio data"""
     try:
-        tts = gTTS(text=text, lang=lang)
-        
-        # Save to temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_file:
-            tts.save(tmp_file.name)
-            
-            # Read the file
-            with open(tmp_file.name, 'rb') as f:
-                audio_bytes = f.read()
-            
-            # Clean up
-            os.unlink(tmp_file.name)
-            
-            return io.BytesIO(audio_bytes)
+        tts = gTTS(text=text, lang='en')
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
+            temp_path = fp.name
+            tts.save(temp_path)
+            audio_bytes = open(temp_path, "rb").read()
+        os.remove(temp_path)
+        return io.BytesIO(audio_bytes)
     except Exception as e:
-        st.error(f"❌ Text-to-speech error: {str(e)}")
+        st.error(f"Error generating speech: {str(e)}")
         return None

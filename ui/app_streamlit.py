@@ -549,8 +549,13 @@ elif feature == "📢 Voice Assistant":
     st.header("🎤 SmartLife Voice Assistant")
     st.markdown("**Speak to SmartLife and get voice responses!**")
     
-    # Create the voice recorder component
-    webrtc_ctx = create_voice_recorder()
+    # Instructions
+    st.info("💡 **How to use:**\n1. Click 'Start Recording' and speak your command\n2. Click 'Stop Recording' when done\n3. Click 'Process Voice Command' to get SmartLife's response")
+    
+    # Create the simplified voice recorder component
+    create_voice_recorder()
+    
+    st.markdown("---")
     
     # Process voice input
     if st.button("🗣️ Process Voice Command", type="primary"):
