@@ -696,42 +696,102 @@ elif feature == "📢 Voice Assistant":
                 st.error(f"Error details: {str(e)}")
                 st.info("💡 Make sure your audio is clear and contains speech.")
 
-        # Add a text input fallback for testing
+        # Text to Voice Feature
         st.markdown("---")
-        st.subheader("🧪 Test Mode (Text Input)")
-        test_command = st.text_input("🔤 Type your command to test:", placeholder="e.g., Tell me a joke")
+        st.subheader("🔤 Text to Voice")
+        st.markdown("💡 **Type your message and get a voice response!**")
         
-        if st.button("🤖 Test with Text"):
-            if test_command.strip():
-                try:
-                    with st.spinner("🔄 Generating response..."):
-                        # Get response from the model
-                        reply = get_voice_assistant_response(test_command, llm)
+        # Text input for voice response
+        text_input = st.text_area("📝 Type your message:", 
+                                 placeholder="e.g., Hello SmartLife, how are you today? Tell me a joke or motivate me!", 
+                                 height=100)
+        
+        col_send, col_clear = st.columns(2)
+        
+        with col_send:
+            if st.button("🗣️ Get Voice Response", type="primary"):
+                if text_input.strip():
+                    try:
+                        with st.spinner("🔄 Processing your message..."):
+                            # Get AI response
+                            ai_response = get_voice_assistant_response(text_input, llm)
+                            
+                            # Generate speech
+                            audio_data = text_to_speech(ai_response)
                         
-                        # Generate speech using the new function
-                        audio_data = text_to_speech(reply)
-                    
-                    st.success("✅ Response generated!")
-                    
-                    col_text, col_audio = st.columns(2)
-                    with col_text:
-                        st.subheader("🤖 AI Response")
-                        st.write(f"**Your input:** {test_command}")
-                        st.write(f"**Response:** {reply}")
-                    
-                    with col_audio:
-                        st.subheader("🎵 Voice Output")
-                        st.audio(audio_data, format='audio/mp3')
-                        st.download_button(
-                            label="📥 Download Response",
-                            data=audio_data.getvalue(),
-                            file_name="smartlife_text_response.mp3",
-                            mime="audio/mp3"
-                        )
-                except Exception as e:
-                    st.error(f"❌ Error: {str(e)}")
-            else:
-                st.warning("⚠️ Please enter a command to test.")
+                        if audio_data:
+                            st.success("✅ Voice response generated!")
+                            
+                            # Display results
+                            col_text, col_audio = st.columns(2)
+                            
+                            with col_text:
+                                st.subheader("🤖 AI Response")
+                                st.write(f"**Your message:** {text_input}")
+                                st.markdown(f"**SmartLife says:** {ai_response}")
+                            
+                            with col_audio:
+                                st.subheader("🎵 Voice Response")
+                                st.audio(audio_data, format='audio/mp3')
+                                
+                                # Download button
+                                st.download_button(
+                                    label="📥 Download Voice Response",
+                                    data=audio_data.getvalue(),
+                                    file_name="smartlife_voice_response.mp3",
+                                    mime="audio/mp3"
+                                )
+                        else:
+                            st.error("❌ Failed to generate voice response")
+                            
+                    except Exception as e:
+                        st.error(f"❌ Error: {str(e)}")
+                        st.info("💡 Please try again with a different message.")
+                else:
+                    st.warning("⚠️ Please enter a message to get a voice response.")
+        
+        with col_clear:
+            if st.button("🔄 Clear"):
+                st.rerun()
+        
+        # Quick commands for easy testing
+        st.markdown("---")
+        st.subheader("⚡ Quick Commands")
+        st.markdown("**Try these quick commands:**")
+        
+        quick_commands = [
+            "Tell me a joke",
+            "Motivate me",
+            "What's the weather like?",
+            "How are you feeling today?",
+            "Give me a wellness tip"
+        ]
+        
+        cols = st.columns(len(quick_commands))
+        for i, cmd in enumerate(quick_commands):
+            with cols[i]:
+                if st.button(f"💬 {cmd}", key=f"quick_{i}"):
+                    try:
+                        with st.spinner("🔄 Processing..."):
+                            ai_response = get_voice_assistant_response(cmd, llm)
+                            audio_data = text_to_speech(ai_response)
+                        
+                        if audio_data:
+                            st.success("✅ Response ready!")
+                            
+                            # Show response
+                            st.write(f"**SmartLife:** {ai_response}")
+                            st.audio(audio_data, format='audio/mp3')
+                            
+                            # Download option
+                            st.download_button(
+                                label="📥 Download",
+                                data=audio_data.getvalue(),
+                                file_name=f"smartlife_{cmd.replace(' ', '_')}.mp3",
+                                mime="audio/mp3"
+                            )
+                    except Exception as e:
+                        st.error(f"❌ Error: {str(e)}")
 
         if st.button("🏠 Go to Home"):
             st.session_state.selected_feature = "🏠 Home"
