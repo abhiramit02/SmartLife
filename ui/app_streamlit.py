@@ -47,23 +47,25 @@ def get_image_base64(image_path):
     return b64_data
 
 
-# Load environment
-load_dotenv()
-print("✅ YOUTUBE_API_KEY from .env:", os.getenv("YOUTUBE_API_KEY"))
-import os
-from dotenv import load_dotenv
-load_dotenv()
-# Get keys from Streamlit secrets
-NEWS_API_KEY = st.secrets["NEWS_API_KEY"]
-SERP_API_KEY = st.secrets["SERPAPI_API_KEY"]
+# Get keys from Streamlit secrets (for production)
+# For local development, you can use .env file
+try:
+    NEWS_API_KEY = st.secrets["NEWS_API_KEY"]
+    SERP_API_KEY = st.secrets["SERPAPI_API_KEY"]
+    groq_api_key = st.secrets["GROQ_API_KEY"]
+    print("✅ Using Streamlit secrets for API keys")
+except:
+    # Fallback to .env for local development
+    load_dotenv()
+    NEWS_API_KEY = os.getenv("NEWS_API_KEY")
+    SERP_API_KEY = os.getenv("SERPAPI_API_KEY")
+    groq_api_key = os.getenv("GROQ_API_KEY")
+    print("✅ Using .env file for API keys (local development)")
 
-# ✅ Access the key from Streamlit secrets
-groq_api_key = st.secrets["GROQ_API_KEY"]
-
-# ✅ Pass the key explicitly
+# Initialize LLM with Groq
 llm = ChatGroq(
-    api_key=groq_api_key,  # REQUIRED!
-    model="mixtral-8x7b-32768"  # or "llama3-8b-8192", etc.
+    api_key=groq_api_key,
+    model="mixtral-8x7b-32768"
 )
 
 if 'users' not in st.session_state:
@@ -125,8 +127,7 @@ def get_top_news():
 if "memory" not in st.session_state:
     st.session_state.memory = ConversationBufferMemory(return_messages=True)
 
-llm = ChatGroq(model="llama3-70b-8192", temperature=0.5)
-
+# Use the already initialized llm from above
 conversation = ConversationChain(llm=llm, memory=st.session_state.memory, verbose=False)
 import streamlit as st
 
@@ -271,80 +272,17 @@ feature = st.session_state.selected_feature# --- Home Page ---# --- Home Page --
 if feature == "🏠 Home":
     st.set_page_config(layout="centered")
 
-    # --- Header CSS (Title + Logout button)
-    header_css = """
-    <style>
-        .header-container {
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 2rem 1rem 2rem;
-            box-sizing: border-box;
-        }
-        .header-container h1 {
-            margin: 0;
-            font-size: 40px;
-        }
-        .logout-button button {
-            background-color: #ff4b4b;
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
-            font-size: 16px;
-            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
-        }
-        .logout-button button:hover {
-            background-color: #e63939;
-        }
-    </style>
-    """
-    st.markdown(header_css, unsafe_allow_html=True)
-
-    # --- Header HTML (Title + Logout button)
-    header_html = """
-    <div class="header-container">
-        <h1>🤖 Welcome to SmartLife – Your AI Companion</h1>
-        <div class="logout-button">
-            <form action="" method="post">
-                <button type="submit">Logout</button>
-            </form>
-        </div>
-    </div>
-    """
-    st.markdown(header_html, unsafe_allow_html=True)
-
-    # --- Logout JavaScript handling
-    st.markdown("""
-    <script>
-        const form = window.parent.document.querySelector("form");
-        if (form) {
-            form.addEventListener("submit", () => {
-                window.parent.postMessage({ type: "logoutClicked" }, "*");
-            });
-        }
-
-        window.addEventListener("message", (event) => {
-            if (event.data.type === "logoutClicked") {
-                fetch("/_stcore/stream", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ clicked_logout: true })
-                });
-            }
-        });
-    </script>
-    """, unsafe_allow_html=True)
-
-    # --- Session update if logout clicked
-    if st.session_state.get("clicked_logout", False):
-        st.session_state.logged_in = False
-        st.session_state.page = "login"
-        st.session_state.username = ""
-        st.rerun()
+    # --- Simple header with logout button
+    st.title("🤖 Welcome to SmartLife – Your AI Companion")
+    
+    # Add logout button in the top right
+    col1, col2, col3 = st.columns([6, 1, 1])
+    with col3:
+        if st.button("🚪 Logout", type="secondary"):
+            st.session_state.logged_in = False
+            st.session_state.page = "login"
+            st.session_state.username = ""
+            st.rerun()
 
     # --- Background CSS (inside the if block!)
 
@@ -625,32 +563,64 @@ elif feature == "📢 Voice Assistant":
         st.markdown("🎤 Upload a `.wav` file with your voice command")
         st.markdown("- *What's my schedule today?*")
         st.markdown("- *Motivate me!*")
+        st.markdown("- *Tell me a joke*")
+        st.markdown("- *What's the weather like?*")
 
         uploaded_file = st.file_uploader("🔊 Upload your voice (WAV format)", type=["wav"])
 
         if uploaded_file is not None:
-            st.write(f"✅ File uploaded: `{uploaded_file.name}`")
-            st.write(f"📄 File type: `{uploaded_file.type}`")
+            st.success(f"✅ File uploaded: `{uploaded_file.name}`")
+            st.info(f"📄 File type: `{uploaded_file.type}`")
 
-        if st.button("🗣️ Submit Voice Command"):
+        if st.button("🗣️ Submit Voice Command", type="primary"):
             if uploaded_file is None:
                 st.warning("⚠️ Please upload a `.wav` file before clicking.")
             else:
                 try:
                     with st.spinner("🔄 Processing your voice..."):
-                        # Save uploaded file temporarily
+                        # Process the voice command
                         audio_data, command, reply = run_voice_assistant(uploaded_file)
 
-                    if command:
-                        st.markdown(f"**🗣️ You said:** {command}")
-                        st.markdown(f"**🤖 SmartLife:** {reply}")
-                        st.audio(audio_data, format="audio/wav")  # Update if your output format is mp3
+                    if audio_data is not None and command is not None and reply is not None:
+                        # Display results in a nice format
+                        st.success("✅ Voice processing completed!")
+                        
+                        # Create columns for better layout
+                        col_a, col_b = st.columns(2)
+                        
+                        with col_a:
+                            st.subheader("🎵 Your Voice Input")
+                            st.write(f"**Transcribed:** {command}")
+                            st.audio(uploaded_file, format='audio/wav')
+                        
+                        with col_b:
+                            st.subheader("🤖 AI Response")
+                            st.write(f"**Response:** {reply}")
+                            st.audio(audio_data, format='audio/mp3')
+                            
+                            # Add download button
+                            st.download_button(
+                                label="📥 Download AI Response",
+                                data=audio_data.getvalue(),
+                                file_name="smartlife_response.mp3",
+                                mime="audio/mp3"
+                            )
+                    
+                    elif command is None and reply is None:
+                        # Show error message
+                        st.error(reply if reply else "An error occurred during processing")
+                    
                     else:
-                        st.warning(reply)
+                        # Show partial results if available
+                        if command:
+                            st.write(f"**Transcribed:** {command}")
+                        if reply:
+                            st.write(f"**Response:** {reply}")
 
                 except Exception as e:
                     st.error("❌ Error while processing the voice command.")
-                    st.exception(e)  # Show detailed traceback for debugging
+                    st.error(f"Error details: {str(e)}")
+                    st.info("💡 Make sure your WAV file is valid and contains clear speech.")
 
         if st.button("🏠 Go to Home"):
             st.session_state.selected_feature = "🏠 Home"
