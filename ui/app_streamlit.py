@@ -610,7 +610,7 @@ elif feature == "📢 Voice Assistant":
                 audio_file = uploaded_file
             else:
                 st.warning("⚠️ Please record your voice or upload a WAV file first.")
-                return
+                st.stop()
             
             try:
                 with st.spinner("🔄 Processing your voice..."):
