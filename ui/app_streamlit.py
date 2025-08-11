@@ -35,6 +35,7 @@ from tools.motivation_booster import (
 )
 import io
 from tools.smartlife_voice_assistant import run_voice_assistant
+from ui.voice_recorder_component import create_voice_recorder, text_to_speech
 
 import streamlit as st
 from langchain_groq import ChatGroq
@@ -560,67 +561,177 @@ elif feature == "📢 Voice Assistant":
 
     with col2:
         st.header("📢 Voice Assistant Mode")
-        st.markdown("🎤 Upload a `.wav` file with your voice command")
+        st.markdown("🎤 **Talk to SmartLife with your voice!**")
+        st.markdown("💡 **Try saying:**")
         st.markdown("- *What's my schedule today?*")
         st.markdown("- *Motivate me!*")
         st.markdown("- *Tell me a joke*")
         st.markdown("- *What's the weather like?*")
+        st.markdown("- *How are you feeling today?*")
 
+        # Add microphone recording functionality
+        st.markdown("---")
+        st.subheader("🎙️ Record Your Voice")
+        
+        # Method 1: File Upload (for compatibility)
+        st.markdown("**Option 1: Upload WAV File**")
         uploaded_file = st.file_uploader("🔊 Upload your voice (WAV format)", type=["wav"])
-
+        
         if uploaded_file is not None:
             st.success(f"✅ File uploaded: `{uploaded_file.name}`")
             st.info(f"📄 File type: `{uploaded_file.type}`")
 
-        if st.button("🗣️ Submit Voice Command", type="primary"):
-            if uploaded_file is None:
-                st.warning("⚠️ Please upload a `.wav` file before clicking.")
+        # Method 2: Real-time recording using streamlit-webrtc
+        st.markdown("**Option 2: Record Live (Recommended)**")
+        
+        # Create the voice recorder component
+        webrtc_ctx = create_voice_recorder()
+        
+        # Instructions for recording
+        st.markdown("""
+        **📋 Recording Instructions:**
+        1. Click "Start Recording" and allow microphone access
+        2. Speak your command clearly
+        3. Click "Stop Recording" when done
+        4. Use "Process Voice Command" to get AI response
+        """)
+        
+        # Process voice input
+        if st.button("🗣️ Process Voice Command", type="primary"):
+            # Check for recorded audio first, then uploaded file
+            audio_source = None
+            audio_file = None
+            
+            if 'recorded_audio_file' in st.session_state and st.session_state.recorded_audio_file:
+                audio_source = "recorded"
+                audio_file = st.session_state.recorded_audio_file
+            elif uploaded_file is not None:
+                audio_source = "uploaded"
+                audio_file = uploaded_file
             else:
-                try:
-                    with st.spinner("🔄 Processing your voice..."):
-                        # Process the voice command
-                        audio_data, command, reply = run_voice_assistant(uploaded_file)
-
-                    if audio_data is not None and command is not None and reply is not None:
-                        # Display results in a nice format
-                        st.success("✅ Voice processing completed!")
+                st.warning("⚠️ Please record your voice or upload a WAV file first.")
+                return
+            
+            try:
+                with st.spinner("🔄 Processing your voice..."):
+                    if audio_source == "recorded":
+                        # For recorded audio, we need to create a file-like object
+                        import tempfile
+                        with open(audio_file, 'rb') as f:
+                            audio_bytes = f.read()
                         
-                        # Create columns for better layout
-                        col_a, col_b = st.columns(2)
+                        # Create a temporary file-like object
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+                            tmp.write(audio_bytes)
+                            tmp_path = tmp.name
                         
-                        with col_a:
-                            st.subheader("🎵 Your Voice Input")
-                            st.write(f"**Transcribed:** {command}")
-                            st.audio(uploaded_file, format='audio/wav')
-                        
-                        with col_b:
-                            st.subheader("🤖 AI Response")
-                            st.write(f"**Response:** {reply}")
-                            st.audio(audio_data, format='audio/mp3')
+                        # Create a mock uploaded file object
+                        class MockUploadedFile:
+                            def __init__(self, file_path):
+                                self.file_path = file_path
+                                self.name = "recorded_audio.wav"
+                                self.type = "audio/wav"
                             
-                            # Add download button
-                            st.download_button(
-                                label="📥 Download AI Response",
-                                data=audio_data.getvalue(),
-                                file_name="smartlife_response.mp3",
-                                mime="audio/mp3"
-                            )
-                    
-                    elif command is None and reply is None:
-                        # Show error message
-                        st.error(reply if reply else "An error occurred during processing")
-                    
+                            def read(self):
+                                with open(self.file_path, 'rb') as f:
+                                    return f.read()
+                            
+                            def seek(self, pos):
+                                pass
+                        
+                        mock_file = MockUploadedFile(tmp_path)
+                        audio_data, command, reply = run_voice_assistant(mock_file)
+                        
+                        # Clean up
+                        try:
+                            os.unlink(tmp_path)
+                        except:
+                            pass
                     else:
-                        # Show partial results if available
-                        if command:
-                            st.write(f"**Transcribed:** {command}")
-                        if reply:
-                            st.write(f"**Response:** {reply}")
+                        # Process uploaded file normally
+                        audio_data, command, reply = run_voice_assistant(audio_file)
 
+                if audio_data is not None and command is not None and reply is not None:
+                    # Display results in a nice format
+                    st.success("✅ Voice processing completed!")
+                    
+                    # Create columns for better layout
+                    col_a, col_b = st.columns(2)
+                    
+                    with col_a:
+                        st.subheader("🎵 Your Voice Input")
+                        st.write(f"**Transcribed:** {command}")
+                        if audio_source == "recorded":
+                            with open(audio_file, 'rb') as f:
+                                st.audio(f.read(), format='audio/wav')
+                        else:
+                            st.audio(uploaded_file, format='audio/wav')
+                    
+                    with col_b:
+                        st.subheader("🤖 AI Response")
+                        st.write(f"**Response:** {reply}")
+                        st.audio(audio_data, format='audio/mp3')
+                        
+                        # Add download button
+                        st.download_button(
+                            label="📥 Download AI Response",
+                            data=audio_data.getvalue(),
+                            file_name="smartlife_response.mp3",
+                            mime="audio/mp3"
+                        )
+                
+                elif command is None and reply is None:
+                    # Show error message
+                    st.error(reply if reply else "An error occurred during processing")
+                
+                else:
+                    # Show partial results if available
+                    if command:
+                        st.write(f"**Transcribed:** {command}")
+                    if reply:
+                        st.write(f"**Response:** {reply}")
+
+            except Exception as e:
+                st.error("❌ Error while processing the voice command.")
+                st.error(f"Error details: {str(e)}")
+                st.info("💡 Make sure your audio is clear and contains speech.")
+
+        # Add a text input fallback for testing
+        st.markdown("---")
+        st.subheader("🧪 Test Mode (Text Input)")
+        test_command = st.text_input("🔤 Type your command to test:", placeholder="e.g., Tell me a joke")
+        
+        if st.button("🤖 Test with Text"):
+            if test_command.strip():
+                try:
+                    with st.spinner("🔄 Generating response..."):
+                        # Get response from the model
+                        reply = get_voice_assistant_response(test_command, llm)
+                        
+                        # Generate speech using the new function
+                        audio_data = text_to_speech(reply)
+                    
+                    st.success("✅ Response generated!")
+                    
+                    col_text, col_audio = st.columns(2)
+                    with col_text:
+                        st.subheader("🤖 AI Response")
+                        st.write(f"**Your input:** {test_command}")
+                        st.write(f"**Response:** {reply}")
+                    
+                    with col_audio:
+                        st.subheader("🎵 Voice Output")
+                        st.audio(audio_data, format='audio/mp3')
+                        st.download_button(
+                            label="📥 Download Response",
+                            data=audio_data.getvalue(),
+                            file_name="smartlife_text_response.mp3",
+                            mime="audio/mp3"
+                        )
                 except Exception as e:
-                    st.error("❌ Error while processing the voice command.")
-                    st.error(f"Error details: {str(e)}")
-                    st.info("💡 Make sure your WAV file is valid and contains clear speech.")
+                    st.error(f"❌ Error: {str(e)}")
+            else:
+                st.warning("⚠️ Please enter a command to test.")
 
         if st.button("🏠 Go to Home"):
             st.session_state.selected_feature = "🏠 Home"
